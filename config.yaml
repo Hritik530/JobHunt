@@ -1,0 +1,76 @@
+# jobhunt configuration — aligned to Hritik Rana's resume
+#
+# Profile focus:
+# Full Stack / Software Engineering | JavaScript / TypeScript / React / Node.js
+# C++ systems/networking exposure | REST APIs | MySQL | Docker | CI/CD
+
+filters:
+  # Title regexes, matched case-insensitively against the job title only.
+  # A title must match at least one include AND zero excludes.
+  include_titles:
+    - '\bsoftware\s+(development\s+)?engineer\b'
+    - '\bsde\b'
+    - '\bsoftware\s+engineer\s*(i|1|ii|2)?\b'
+    - '\bfull[- ]?stack\s+(software\s+)?engineer\b'
+    - '\b(full[- ]?stack|frontend|front-end|backend|back-end)\s+engineer\b'
+    - '\bbackend\s+(software\s+)?engineer\b'
+    - '\bfrontend\s+(software\s+)?engineer\b'
+    - '\bweb\s+engineer\b'
+    - '\bapplication\s+engineer\b'
+    - '\bsoftware\s+developer\b'
+    - '\bfull[- ]?stack\s+developer\b'
+    - '\bweb\s+developer\b'
+    - '\bdevops\s+engineer\b'
+    - '\bsre\b'
+    - '\bc\+\+\s+(software\s+)?engineer\b'
+    - '\bsoftware\s+engineer\b.*\bc\+\+\b'
+    - '\b(intern|internship|trainee)\b.*\b(software|developer|engineer|technology|technical)\b'
+    - '\b(software|developer|engineer|technology|technical)\b.*\b(intern|internship|trainee)\b'
+
+  # Anything matching these is dropped even if an include matched.
+  exclude_titles:
+    - '\b(senior|staff|principal|distinguished|fellow|architect)\b'
+    - '\b(director|vp|vice president|head of|chief|cto)\b'
+    - '\b(manager|management)\b'
+    - '\b(sales|account executive|marketing|recruit|recruiter|support|customer success)\b'
+    - '\b(data scientist|machine learning scientist|research scientist)\b'
+    - '\b(data engineer|analytics engineer)\b'
+    - '\bqa\b|\bquality assurance\b|\btest engineer\b|\bautomation tester\b'
+    - '\bmobile\b|\bios\b|\bandroid\b'
+    - '\bsecurity engineer\b'
+    - '\bcloud engineer\b'
+    - '\bembedded\b|\bfirmware\b|\bkernel\b|\bdriver\b'
+
+  # Resume location: Bhopal, India.
+  # Major Indian tech hubs are included for broader realistic opportunities.
+  locations:
+    - bangalore
+    - bengaluru
+    - pune
+    - hyderabad
+    - mumbai
+    - delhi
+    - gurgaon
+    - gurugram
+    - noida
+    - chennai
+    - indore
+    - bhopal
+    - india
+
+  allow_remote: true
+  max_age_days: 30
+
+# --- LLM stages -------------------------------------------------------------
+screen_batch_size: 8
+screen_jd_chars: 1800
+draft_jd_chars: 6000
+score_threshold: 2.0
+max_per_digest: 5
+
+# --- paths ------------------------------------------------------------------
+companies_file: companies.yaml
+profile_file: profile.json
+seen_file: seen.json
+digest_file: out/digest.html
+tracker_csv: out/tracker.csv
