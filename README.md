@@ -1,17 +1,18 @@
 # jobhunt
 
-A personal job-search agent. It reads public ATS APIs every morning, throws away
-the ~99% that don't fit you, scores what's left against your resume, drafts an
-application kit for the best few, and emails you a digest.
+A personal job-search agent. It reads public ATS APIs every morning, keeps only
+roles explicitly marked as fresher or entry-level, filters out stated experience
+requirements and non-India locations, then scores the remaining jobs and emails
+a digest.
 
 **It never submits an application.** It finds, filters, ranks and drafts. You
 read the digest, edit the cover note, and press submit yourself.
 
 ```
-2000 postings  →  40 candidates  →  5 in your inbox
-   fetch          regex/location      LLM screen
-                  /freshness gate     + draft
-                  (free, no LLM)
+2000 postings  →  India entry-level roles  →  up to 5 in your inbox
+  fetch          title/seniority/location     LLM screen
+            experience/freshness         + draft
+            (free, no LLM)
 ```
 
 > **New to Python?** Read **[SETUP.md](SETUP.md)** instead — it's a 13-step guide
@@ -37,13 +38,11 @@ pipeline runs with no secrets configured. You should see:
 
 ```
 [2/5] filtering
-  prefilter: 12 -> 5 (dropped title=5 location=1 stale=1)
-[3/5] screening 5 jobs (keyword stub — DEV ONLY)
-  3 scored >= 7.0
+  prefilter: 12 -> 4 (dropped title=5 seniority=0 location=1 experience=2 stale=0)
+[3/5] screening 4 jobs (keyword stub — DEV ONLY)
 [5/5] digest
   wrote out/digest.html
 
-funnel: 12 scanned -> 5 passed filters -> 5 new -> 3 in digest
 ```
 
 Open `out/digest.html` in a browser. That's the email you'd have received.
@@ -87,12 +86,29 @@ This is the whole cost story — get it right and you spend cents a day.
 filters:
   include_titles: ['\bsde\b', 'software development engineer', ...]
   exclude_titles: ['\b(staff|principal)\b', '\b(manager)\b', ...]
+  entry_level_patterns: ['entry-level', 'new grad', 'fresher', 'junior', ...]
+  exclude_experience_patterns: ['2+ years ... experience', ...]
   locations: [bangalore, bengaluru, india]
+  remote_locations: [india, bangalore, bengaluru, ...]
   allow_remote: true
   max_age_days: 30
 score_threshold: 7.0
 max_per_digest: 5
 ```
+
+The prefilter is a hard gate before screening or email: a role must match an
+included title, avoid excluded/senior titles, and contain an explicit entry-level
+signal in its title or description. Roles with a detected non-zero years-of-
+experience requirement or explicit required-experience language are dropped.
+Roles that do not clearly identify as entry-level are also dropped, even if the
+description does not mention experience.
+
+Onsite/hybrid roles must match one of `locations`. A remote role must match
+`remote_locations`, which should contain only places where you can work; the
+provided configuration restricts remote jobs to India and listed Indian cities.
+An unspecified or global remote location is not emailed. This relies on the
+location and wording published by each ATS, so review the job description before
+applying.
 
 > **`sde` does not match "Software Development Engineer".** They share no
 > substring. Use `\bsde\b` for the acronym *and* list the spelled-out variants
@@ -200,7 +216,7 @@ normal password stops working once 2FA is on.
 ```
 jobhunt/
   fetch.py       Job dataclass, strip_html, 3 pure parsers, fetch_all
-  prefilter.py   title/location/freshness gate — no LLM, no cost
+  prefilter.py   entry-level/experience/location/freshness gate — no LLM, no cost
   providers.py   the swappable provider interface + 5 backends
   llm.py         screen() / draft() / build_profile() / keyword stub
   digest.py      HTML email (inline CSS only — Gmail strips <style>)
@@ -210,7 +226,7 @@ jobhunt/
   cli.py         argparse: profile / run / applied / stats
 config.yaml      filters, thresholds, paths
 companies.yaml   boards to poll
-tests/           55 tests, no network, no key
+tests/           offline tests, no network, no key
 ```
 
 HTTP is kept out of the parsers on purpose. Each `parse_*(slug, company, body)`
@@ -244,8 +260,8 @@ No network, no API key, no cost. The suite covers:
 - the two bugs that cost me an evening each: Lever's epoch-ms timestamps
   (fixture dates are generated relative to *now*, never hardcoded, so they
   can't silently age past the freshness gate) and the `\bsde\b` regex
-- prefilter rejects the planted junk: wrong seniority, wrong city, wrong
-  function, a stale posting, an unlisted Ashby draft
+- prefilter rejects wrong seniority, ambiguous-level and experience-required
+  roles, non-India locations, wrong functions, stale posts, and unlisted drafts
 - the LLM layer with the provider stubbed: batching splits at the configured
   size, JD truncation is applied before send, fenced/preamble/object-or-array
   JSON all parse, scores land on the right job when returned out of order, a
@@ -258,7 +274,11 @@ No network, no API key, no cost. The suite covers:
 
 With ~15 boards, a tight `config.yaml`, Haiku screening and Sonnet drafting,
 this lands in the low single-digit rupees per day. The prefilter is what makes
-that true: nothing reaches a model until it has already passed title, location
-and freshness. Set `SCREEN_PROVIDER=groq` or `gemini` and it's free.
+that true: nothing reaches a model until it has passed title, entry-level,
+experience, India-location and freshness checks. Set `SCREEN_PROVIDER=groq` or
+`gemini` and screening is free.
 
 Use `--limit` while tuning filters so a bad regex can't run up a bill.
+
+# JobHunt
+Architected an automated Python pipeline that polls public ATS APIs (Greenhouse, Lever, Ashby) to aggregate, filter, and score roles against candidate profiles using LLMs.

@@ -38,13 +38,13 @@ def _ashby(days: int) -> str:
 
 STALE_DAYS = 280   # comfortably past any sane max_age_days
 
-_BACKEND_JD = """<p>We are building the control plane for our edge platform.</p>
+_BACKEND_JD = """<p>We are building the control plane for our edge platform.
+New graduates are welcome; no prior professional experience is required.</p>
 <p><strong>What you'll do</strong></p><ul>
 <li>Design and operate low-latency distributed services handling millions of RPS</li>
 <li>Work in Go and Java across caching, routing and traffic-steering systems</li>
 <li>Own reliability: on-call, incident response, capacity planning</li></ul>
 <p><strong>What we look for</strong></p><ul>
-<li>3+ years building backend systems at scale</li>
 <li>Strong fundamentals in data structures, algorithms and networking (TCP/IP, HTTP, DNS)</li>
 <li>Experience with Kubernetes and observability tooling</li></ul>"""
 
@@ -53,13 +53,13 @@ across three teams, mentor senior engineers, and own architecture for our
 petabyte-scale storage layer.</p><ul><li>10+ years of experience required</li>
 <li>Proven track record leading org-wide migrations</li></ul>"""
 
-_FRONTEND_JD = """<p>Build delightful UI in React and TypeScript. Own our design
+_FRONTEND_JD = """<p>Entry-level role for recent graduates. Build delightful UI in React and TypeScript. Own our design
 system, animations and accessibility work.</p>"""
 
 GREENHOUSE = {
     "acme-edge": {"jobs": [
-        # keeper: right level, right city, fresh
-        {"id": 5501001, "title": "Software Engineer II, Distributed Systems",
+        # keeper: entry level, right city, fresh
+        {"id": 5501001, "title": "Software Engineer I, Distributed Systems",
          "absolute_url": "https://boards.greenhouse.io/acme-edge/jobs/5501001",
          "location": {"name": "Bangalore, India"},
          "updated_at": _gh(2), "content": _BACKEND_JD},
@@ -131,7 +131,7 @@ LEVER = {
          "categories": {"location": "Remote (India)", "team": "SRE",
                         "commitment": "Full-time"},
          "createdAt": _lever(1),
-         "descriptionPlain": "Own SLOs, on-call and incident response for a "
+         "descriptionPlain": "New graduates welcome. Own SLOs, on-call and incident response for a "
                              "multi-region Kubernetes fleet. Terraform, Prometheus, Go.",
          "lists": [{"text": "Nice to have",
                     "content": "<li>CDN or edge networking background</li>"}]},

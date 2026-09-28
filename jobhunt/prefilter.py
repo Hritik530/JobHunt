@@ -11,10 +11,19 @@ from datetime import datetime, timedelta, timezone
 from .fetch import Job
 
 REMOTE_HINTS = ("remote", "anywhere", "work from home", "wfh", "distributed")
+NO_EXPERIENCE_REQUIRED = re.compile(
+    r"\bno\s+(?:(?:prior|previous|professional)\s+)*experience\s+"
+    r"(?:is\s+)?(?:required|necessary)\b|"
+    r"\bexperience\s+(?:is\s+)?not\s+required\b", re.I)
 
 
 def _any_match(patterns: list[str], text: str) -> bool:
     return any(re.search(p, text, re.I) for p in patterns)
+
+
+def _requires_experience(patterns: list[str], description: str) -> bool:
+    description = NO_EXPERIENCE_REQUIRED.sub("", description)
+    return _any_match(patterns, description)
 
 
 def _parse_date(value: str | None) -> datetime | None:
@@ -34,22 +43,36 @@ def prefilter(jobs: list[Job], cfg: dict) -> list[Job]:
     inc = cfg.get("include_titles") or [r"."]
     exc = cfg.get("exclude_titles") or []
     locs = [l.lower() for l in (cfg.get("locations") or [])]
+    remote_locs = [l.lower() for l in (cfg.get("remote_locations") or locs)]
+    entry_patterns = cfg.get("entry_level_patterns") or []
+    experience_patterns = cfg.get("exclude_experience_patterns") or []
     allow_remote = bool(cfg.get("allow_remote", True))
     max_age = cfg.get("max_age_days")
     cutoff = datetime.now(timezone.utc) - timedelta(days=max_age) if max_age else None
 
-    kept, stats = [], {"title": 0, "location": 0, "age": 0}
+    kept, stats = [], {"title": 0, "seniority": 0, "location": 0,
+                       "experience": 0, "age": 0}
     for j in jobs:
         if not _any_match(inc, j.title) or (exc and _any_match(exc, j.title)):
             stats["title"] += 1
             continue
 
+        if entry_patterns and not _any_match(entry_patterns, f"{j.title}\n{j.description}"):
+            stats["seniority"] += 1
+            continue
+
         if locs:
-            hay = f"{j.location} {j.title}".lower()
-            is_remote = allow_remote and any(h in hay for h in REMOTE_HINTS)
-            if not is_remote and not any(l in hay for l in locs):
+            location = j.location.lower()
+            is_remote = any(h in location for h in REMOTE_HINTS)
+            allowed_locations = remote_locs if is_remote else locs
+            if (is_remote and not allow_remote) or not any(
+                    place in location for place in allowed_locations):
                 stats["location"] += 1
                 continue
+
+        if experience_patterns and _requires_experience(experience_patterns, j.description):
+            stats["experience"] += 1
+            continue
 
         if cutoff:
             posted = _parse_date(j.posted_at)
@@ -59,6 +82,8 @@ def prefilter(jobs: list[Job], cfg: dict) -> list[Job]:
 
         kept.append(j)
 
-    print(f"  prefilter: {len(jobs)} -> {len(kept)} "
-          f"(dropped title={stats['title']} location={stats['location']} stale={stats['age']})")
+        print(f"  prefilter: {len(jobs)} -> {len(kept)} "
+            f"(dropped title={stats['title']} seniority={stats['seniority']} "
+            f"location={stats['location']} "
+            f"experience={stats['experience']} stale={stats['age']})")
     return kept

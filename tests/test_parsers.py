@@ -49,7 +49,7 @@ def test_strip_html_handles_none_and_empty():
 
 def test_greenhouse_maps_every_field():
     jobs = parse_greenhouse("acme-edge", "Acme Edge", mock.GREENHOUSE["acme-edge"])
-    j = next(j for j in jobs if j.title.startswith("Software Engineer II"))
+    j = next(j for j in jobs if j.title.startswith("Software Engineer I"))
     assert j.job_id == "greenhouse:acme-edge:5501001"
     assert j.ats == "greenhouse"
     assert j.company == "Acme Edge"
@@ -135,7 +135,6 @@ def test_bare_sde_regex_does_not_match_the_spelled_out_title():
     "Staff Software Engineer, Storage",       # too senior
     "Engineering Manager, Platform",          # management track
     "Enterprise Account Executive",           # wrong function
-    "Frontend Engineer, Design Systems",      # wrong discipline
     "Data Scientist, Growth",                 # wrong discipline
 ])
 def test_junk_titles_are_rejected(title):
@@ -145,15 +144,14 @@ def test_junk_titles_are_rejected(title):
     assert excluded or not included, f"{title!r} would have survived"
 
 
-def test_full_mock_funnel_keeps_only_the_five_real_matches():
+def test_full_mock_funnel_keeps_only_entry_level_matches():
     kept = prefilter(fetch_all_mock(), FILTERS)
     titles = sorted(j.title for j in kept)
     assert titles == [
-        "Backend Engineer (Go)",
+        "Frontend Engineer, Design Systems",
         "Site Reliability Engineer",
         "Software Development Engineer, Core Infra",
-        "Software Engineer II, Distributed Systems",
-        "Software Engineer, Networking",
+        "Software Engineer I, Distributed Systems",
     ]
 
 
@@ -162,25 +160,52 @@ def test_stale_posting_is_dropped_by_freshness_gate():
     assert not any("Senior Software Engineer, Platform" == j.title for j in kept)
 
 
-def test_wrong_city_dropped_but_remote_kept():
+def test_wrong_city_and_remote_outside_india_are_dropped():
     kept = prefilter(fetch_all_mock(), FILTERS)
     assert not any("San Francisco" in (j.location or "") for j in kept)
     assert any("Remote" in (j.location or "") for j in kept)
-
-
-def test_allow_remote_is_what_lets_an_out_of_region_remote_role_through():
-    """"Remote (India)" already matches the `india` location, so it is the
-    wrong fixture for this. Use a remote role that names no allowed city."""
     from jobhunt.fetch import Job
-    remote = Job(job_id="lever:x:1", ats="lever", company="X",
-                 title="Backend Engineer", location="Remote - Global",
-                 url="https://example.com", description="Go")
+    remote_global = Job(job_id="lever:x:1", ats="lever", company="X",
+                        title="Backend Engineer", location="Remote - Global",
+                        url="https://example.com", description="No experience required.")
+    assert prefilter([remote_global], FILTERS) == []
 
-    kept_on = prefilter([remote], dict(FILTERS, allow_remote=True))
-    kept_off = prefilter([remote], dict(FILTERS, allow_remote=False))
 
-    assert len(kept_on) == 1
-    assert kept_off == []
+def test_nonzero_experience_requirement_is_dropped():
+    from jobhunt.fetch import Job
+    required = Job(job_id="lever:x:2", ats="lever", company="X",
+                   title="Backend Engineer", location="Bangalore, India",
+                   url="https://example.com",
+                   description="Requires 2-5 years backend experience.")
+    fresher = Job(job_id="lever:x:3", ats="lever", company="X",
+                  title="Backend Engineer", location="Bangalore, India",
+                  url="https://example.com",
+                  description="New graduates welcome; no prior experience required.")
+    contradictory = Job(job_id="lever:x:5", ats="lever", company="X",
+                        title="Backend Engineer", location="Bangalore, India",
+                        url="https://example.com",
+                        description="No experience required, but 3 years experience is required.")
+
+    assert prefilter([required], FILTERS) == []
+    assert prefilter([fresher], FILTERS) == [fresher]
+    assert prefilter([contradictory], FILTERS) == []
+
+
+def test_roles_without_an_explicit_entry_level_signal_are_dropped():
+    from jobhunt.fetch import Job
+    ambiguous = Job(job_id="lever:x:4", ats="lever", company="X",
+                    title="Backend Engineer", location="Bangalore, India",
+                    url="https://example.com", description="Build backend services.")
+    assert prefilter([ambiguous], FILTERS) == []
+
+
+@pytest.mark.parametrize("title", ["Software Engineer II", "SDE II"])
+def test_above_entry_level_titles_are_dropped(title):
+    from jobhunt.fetch import Job
+    engineer_ii = Job(job_id="greenhouse:x:1", ats="greenhouse", company="X",
+                      title=title, location="Bangalore, India",
+                      url="https://example.com", description="No experience required.")
+    assert prefilter([engineer_ii], FILTERS) == []
 
 
 def test_empty_filters_keep_everything():
